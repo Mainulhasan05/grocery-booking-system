@@ -9,14 +9,14 @@
 const { Router } = require('express');
 const authRoutes = require('./auth.routes');
 const adminGroceryRoutes = require('./admin/grocery.routes');
+const userGroceryRoutes = require('./user/grocery.routes');
+const userOrderRoutes = require('./user/order.routes');
 
 const router = Router();
 
 router.use('/auth', authRoutes);
 router.use('/admin/groceries', adminGroceryRoutes);
-
-// User routes will be mounted here in later phases:
-// router.use('/user/groceries', userGroceryRoutes);
-// router.use('/user/orders', userOrderRoutes);
+router.use('/user/groceries', userGroceryRoutes);
+router.use('/user/orders', userOrderRoutes);
 
 module.exports = router;
