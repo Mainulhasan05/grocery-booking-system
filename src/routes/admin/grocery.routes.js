@@ -17,6 +17,7 @@ const {
   updateGroceryValidator,
   updateInventoryValidator,
 } = require('../../validators/grocery.validator');
+const validateUUID = require('../../middlewares/validateUUID.middleware');
 const { ROLES } = require('../../utils/constants');
 
 const router = Router();
@@ -175,7 +176,7 @@ router.get('/', controller.getAll);
  *       404:
  *         description: Grocery item not found
  */
-router.get('/:id', controller.getOne);
+router.get('/:id', validateUUID(), controller.getOne);
 
 /**
  * @swagger
@@ -220,7 +221,7 @@ router.get('/:id', controller.getOne);
  *       422:
  *         description: Validation failed
  */
-router.put('/:id', updateGroceryValidator, validate, controller.update);
+router.put('/:id', validateUUID(), updateGroceryValidator, validate, controller.update);
 
 /**
  * @swagger
@@ -245,7 +246,7 @@ router.put('/:id', updateGroceryValidator, validate, controller.update);
  *       404:
  *         description: Grocery item not found
  */
-router.delete('/:id', controller.remove);
+router.delete('/:id', validateUUID(), controller.remove);
 
 /**
  * @swagger
@@ -283,6 +284,6 @@ router.delete('/:id', controller.remove);
  *       422:
  *         description: Validation failed
  */
-router.patch('/:id/inventory', updateInventoryValidator, validate, controller.updateInventory);
+router.patch('/:id/inventory', validateUUID(), updateInventoryValidator, validate, controller.updateInventory);
 
 module.exports = router;

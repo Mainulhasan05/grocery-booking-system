@@ -12,6 +12,7 @@ const { authenticate } = require('../../middlewares/auth.middleware');
 const { authorize } = require('../../middlewares/role.middleware');
 const validate = require('../../middlewares/validate.middleware');
 const { placeOrderValidator } = require('../../validators/order.validator');
+const validateUUID = require('../../middlewares/validateUUID.middleware');
 const { ROLES } = require('../../utils/constants');
 
 const router = Router();
@@ -170,6 +171,6 @@ router.get('/', controller.getOrders);
  *       404:
  *         description: Order not found
  */
-router.get('/:id', controller.getOrderById);
+router.get('/:id', validateUUID(), controller.getOrderById);
 
 module.exports = router;

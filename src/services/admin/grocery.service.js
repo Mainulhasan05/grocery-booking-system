@@ -141,7 +141,6 @@ const updateInventory = async (id, quantity) => {
     });
 
     if (!item) {
-      await transaction.rollback();
       throw new AppError('Grocery item not found', HTTP_STATUS.NOT_FOUND);
     }
 
@@ -153,9 +152,7 @@ const updateInventory = async (id, quantity) => {
 
     return item;
   } catch (err) {
-    if (!err.isOperational) {
-      await transaction.rollback();
-    }
+    await transaction.rollback();
     throw err;
   }
 };

@@ -11,6 +11,7 @@
  */
 
 const logger = require('../config/logger');
+const config = require('../config/env');
 const { error: sendError } = require('../utils/response');
 const { HTTP_STATUS } = require('../utils/constants');
 
@@ -50,7 +51,7 @@ const errorHandler = (err, req, res, _next) => {
   }
 
   // ─── Unexpected errors: never leak internals ───────────────
-  const message = process.env.NODE_ENV === 'production'
+  const message = config.isProduction
     ? 'Something went wrong'
     : err.message;
 
