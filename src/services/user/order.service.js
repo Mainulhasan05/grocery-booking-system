@@ -32,8 +32,19 @@ const placeOrder = async (userId, items) => {
   const transaction = await sequelize.transaction();
 
   try {
+    // ─── 0. Merge duplicate item IDs (sum quantities) ───────
+    const mergedMap = new Map();
+    items.forEach((i) => {
+      if (mergedMap.has(i.grocery_item_id)) {
+        mergedMap.get(i.grocery_item_id).quantity += i.quantity;
+      } else {
+        mergedMap.set(i.grocery_item_id, { ...i });
+      }
+    });
+    const mergedItems = Array.from(mergedMap.values());
+
     // ─── 1. Fetch all requested items in one query ──────────
-    const itemIds = items.map((i) => i.grocery_item_id);
+    const itemIds = mergedItems.map((i) => i.grocery_item_id);
 
     const groceryItems = await GroceryItem.scope('withInactive').findAll({
       where: { id: { [Op.in]: itemIds } },
@@ -56,7 +67,7 @@ const placeOrder = async (userId, items) => {
     }
 
     // ─── 2b. Validate active status ─────────────────────────
-    const inactiveItems = items.filter((i) => !itemMap.get(i.grocery_item_id).is_active);
+    const inactiveItems = mergedItems.filter((i) => !itemMap.get(i.grocery_item_id).is_active);
     if (inactiveItems.length > 0) {
       throw new AppError(
         'One or more items are no longer available',
@@ -69,7 +80,7 @@ const placeOrder = async (userId, items) => {
     }
 
     // ─── 2c. Validate sufficient stock ──────────────────────
-    const insufficientItems = items.filter((i) => {
+    const insufficientItems = mergedItems.filter((i) => {
       const gi = itemMap.get(i.grocery_item_id);
       return gi.quantity < i.quantity;
     });
@@ -92,7 +103,7 @@ const placeOrder = async (userId, items) => {
 
     // ─── 3. Calculate total amount ──────────────────────────
     let totalAmount = 0;
-    const orderItemsData = items.map((i) => {
+    const orderItemsData = mergedItems.map((i) => {
       const gi = itemMap.get(i.grocery_item_id);
       const unitPrice = parseFloat(gi.price);
       const lineTotal = unitPrice * i.quantity;
@@ -127,7 +138,7 @@ const placeOrder = async (userId, items) => {
     );
 
     // ─── 6. Decrement inventory ─────────────────────────────
-    const decrementPromises = items.map((i) => {
+    const decrementPromises = mergedItems.map((i) => {
       const gi = itemMap.get(i.grocery_item_id);
       return gi.decrement('quantity', {
         by: i.quantity,
