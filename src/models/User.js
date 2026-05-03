@@ -43,7 +43,17 @@ module.exports = (sequelize) => {
         allowNull: false,
         validate: {
           notEmpty: { msg: 'Password cannot be empty' },
-          len: { args: [6, 255], msg: 'Password must be at least 6 characters' },
+          len: { args: [8, 255], msg: 'Password must be at least 8 characters' },
+          hasUppercase(value) {
+            if (!/[A-Z]/.test(value)) {
+              throw new Error('Password must contain at least one uppercase letter');
+            }
+          },
+          hasNumber(value) {
+            if (!/[0-9]/.test(value)) {
+              throw new Error('Password must contain at least one number');
+            }
+          },
         },
       },
       role: {

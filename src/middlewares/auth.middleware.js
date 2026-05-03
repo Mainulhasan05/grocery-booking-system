@@ -5,15 +5,17 @@
  *
  * JWT authentication middleware.
  * Extracts Bearer token from Authorization header, verifies it,
- * and attaches the decoded payload to req.user.
+ * then confirms the user still exists in the database and their
+ * role has not changed since the token was issued.
  */
 
 const jwt = require('jsonwebtoken');
 const config = require('../config/env');
+const { User } = require('../models');
 const AppError = require('../utils/AppError');
 const { HTTP_STATUS } = require('../utils/constants');
 
-const authenticate = (req, _res, next) => {
+const authenticate = async (req, _res, next) => {
   try {
     // Extract token from Authorization header
     const authHeader = req.headers.authorization;
@@ -26,14 +28,27 @@ const authenticate = (req, _res, next) => {
       throw new AppError('Authentication required. Please provide a valid token', HTTP_STATUS.UNAUTHORIZED);
     }
 
-    // Verify token
+    // Verify token signature and expiration
     const decoded = jwt.verify(token, config.jwt.secret);
 
-    // Attach user payload to request
+    // Verify user still exists and role has not changed
+    const user = await User.findByPk(decoded.id, {
+      attributes: ['id', 'email', 'role'],
+    });
+
+    if (!user) {
+      throw new AppError('The user belonging to this token no longer exists', HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    if (user.role !== decoded.role) {
+      throw new AppError('User role has changed. Please log in again', HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    // Attach verified user payload to request
     req.user = {
-      id: decoded.id,
-      email: decoded.email,
-      role: decoded.role,
+      id: user.id,
+      email: user.email,
+      role: user.role,
     };
 
     next();

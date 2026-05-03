@@ -11,28 +11,31 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const config = require('../config/env');
 const AppError = require('../utils/AppError');
-const { HTTP_STATUS } = require('../utils/constants');
+const { HTTP_STATUS, ROLES } = require('../utils/constants');
 const logger = require('../config/logger');
 
 /**
  * Register a new user.
  *
+ * Public registration always creates a 'user' role account.
+ * Admin accounts must be provisioned via database seeders
+ * or a protected admin-only endpoint — never through public signup.
+ *
  * @param {object} params
  * @param {string} params.name
  * @param {string} params.email
  * @param {string} params.password
- * @param {string} [params.role]
  * @returns {Promise<object>} Created user (without password)
  */
-const register = async ({ name, email, password, role }) => {
+const register = async ({ name, email, password }) => {
   // Check email uniqueness
   const existingUser = await User.findOne({ where: { email } });
   if (existingUser) {
     throw new AppError('Email already registered', HTTP_STATUS.CONFLICT);
   }
 
-  // Create user — password hashing handled by model beforeCreate hook
-  const user = await User.create({ name, email, password, role });
+  // Create user — role is hardcoded to 'user'; password hashing handled by model hook
+  const user = await User.create({ name, email, password, role: ROLES.USER });
 
   logger.info(`New user registered: ${user.id} (${user.role})`);
 

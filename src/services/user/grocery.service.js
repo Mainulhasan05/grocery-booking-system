@@ -18,8 +18,11 @@ const getAvailableItems = async ({ page, limit, offset, search }) => {
     quantity: { [Op.gt]: 0 },
   };
 
-  if (search) {
-    where.name = { [Op.iLike]: `%${search}%` };
+  if (search && typeof search === 'string') {
+    const sanitizedSearch = search.trim().substring(0, 200);
+    if (sanitizedSearch.length > 0) {
+      where.name = { [Op.iLike]: `%${sanitizedSearch}%` };
+    }
   }
 
   const { rows, count } = await GroceryItem.findAndCountAll({

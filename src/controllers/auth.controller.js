@@ -12,9 +12,9 @@ const { success } = require('../utils/response');
 const { HTTP_STATUS } = require('../utils/constants');
 
 const register = asyncHandler(async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password } = req.body;
 
-  const user = await authService.register({ name, email, password, role });
+  const user = await authService.register({ name, email, password });
 
   success(res, 'User registered successfully', { user }, HTTP_STATUS.CREATED);
 });

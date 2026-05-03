@@ -39,8 +39,11 @@ const createItem = async (data) => {
 const getAllItems = async ({ page, limit, offset, search }) => {
   const where = {};
 
-  if (search) {
-    where.name = { [Op.iLike]: `%${search}%` };
+  if (search && typeof search === 'string') {
+    const sanitizedSearch = search.trim().substring(0, 200);
+    if (sanitizedSearch.length > 0) {
+      where.name = { [Op.iLike]: `%${sanitizedSearch}%` };
+    }
   }
 
   const { rows, count } = await GroceryItem.scope('withInactive').findAndCountAll({
@@ -124,20 +127,37 @@ const deleteItem = async (id) => {
 
 /**
  * Update inventory level for a grocery item.
- * Admin sets the quantity directly.
+ * Runs inside a transaction with row-level locking to prevent
+ * race conditions with concurrent order placements.
  */
 const updateInventory = async (id, quantity) => {
-  const item = await GroceryItem.scope('withInactive').findByPk(id);
+  const { sequelize } = require('../../models');
+  const transaction = await sequelize.transaction();
 
-  if (!item) {
-    throw new AppError('Grocery item not found', HTTP_STATUS.NOT_FOUND);
+  try {
+    const item = await GroceryItem.scope('withInactive').findByPk(id, {
+      lock: transaction.LOCK.UPDATE,
+      transaction,
+    });
+
+    if (!item) {
+      await transaction.rollback();
+      throw new AppError('Grocery item not found', HTTP_STATUS.NOT_FOUND);
+    }
+
+    item.quantity = quantity;
+    await item.save({ transaction });
+
+    await transaction.commit();
+    logger.info(`Inventory updated for ${item.id}: quantity = ${quantity}`);
+
+    return item;
+  } catch (err) {
+    if (!err.isOperational) {
+      await transaction.rollback();
+    }
+    throw err;
   }
-
-  item.quantity = quantity;
-  await item.save();
-  logger.info(`Inventory updated for ${item.id}: quantity = ${quantity}`);
-
-  return item;
 };
 
 module.exports = {
